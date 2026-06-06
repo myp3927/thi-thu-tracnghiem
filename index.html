@@ -166,6 +166,12 @@
   .histtable tbody tr:nth-child(even){background:#fafbfd}
   .hist-empty{color:var(--muted);font-size:13px;background:#f5f7fb;border-radius:10px;padding:14px;text-align:center}
   .hide{display:none}
+  /* Khử "sticky hover" trên thiết bị cảm ứng (tránh 1 ô bị viền xanh dù chưa chọn) */
+  @media (hover:none){
+    .opt:not(.sel):hover{border-color:#dde3ec;background:#fff;transform:none;box-shadow:none}
+    .ropt:not(.correct):not(.wrong):hover:not(:disabled){border-color:#dde3ec;background:#fff}
+    .qbtn:not(.answered):not(.current):not(.correct):not(.wrong):hover{border-color:#d8dee9;transform:none;box-shadow:none}
+  }
   code{background:#eef1f6;padding:1px 6px;border-radius:5px;font-family:Consolas,monospace;font-size:.9em;color:#1e3c6e}
   @media(max-width:820px){
     .wrap{flex-direction:column}aside{position:static;width:100%;flex:none}
