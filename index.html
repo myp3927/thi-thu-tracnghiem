@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phòng thi thử — Trắc nghiệm Tin học Nâng cao (HUIT)</title>
+<style>
+  :root{
+    --pp:#2b579a; --pp-dark:#1e3c6e; --pp-light:#e9eff7;
+    --ink:#222; --muted:#666; --line:#dcdcdc; --bg:#eef1f5;
+    --ok:#1b7f4b; --okbg:#e7f6ee; --bad:#c62828; --badbg:#fdebec;
+    --warn:#b9770b; --warnbg:#fff6e5; --cur:#e8a200;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,Tahoma,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  /* ===== Top bar ===== */
+  .topbar{background:linear-gradient(135deg,var(--pp),var(--pp-dark));color:#fff;padding:12px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.15);position:sticky;top:0;z-index:20}
+  .topbar h1{font-size:17px;margin:0;font-weight:600}
+  .topbar .sub{font-size:12.5px;opacity:.9}
+  .topbar .spacer{flex:1}
+  .examsel{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:6px 10px;font-size:13.5px}
+  .examsel option{color:#222}
+  .timer{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:6px 14px;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+  .timer.low{background:#c62828;border-color:#ff8a80;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.55}}
+  /* ===== Layout ===== */
+  .wrap{display:flex;gap:18px;max-width:1180px;margin:18px auto;padding:0 16px;align-items:flex-start}
+  /* ===== Nav panel ===== */
+  aside{position:sticky;top:74px;flex:0 0 220px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px}
+  aside h3{margin:0 0 10px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+  .qbtn{aspect-ratio:1;border:1px solid #cfd6e0;background:#f3f5f8;border-radius:7px;font-size:13px;font-weight:600;color:#445;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .qbtn:hover{border-color:var(--pp)}
+  .qbtn.answered{background:var(--pp);color:#fff;border-color:var(--pp)}
+  .qbtn.current{outline:3px solid var(--cur);outline-offset:1px}
+  .qbtn.correct{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .qbtn.wrong{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .legend{margin-top:12px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+  .legend span{display:flex;align-items:center;gap:7px}
+  .dot{width:13px;height:13px;border-radius:4px;display:inline-block;border:1px solid #cfd6e0}
+  .submitbtn{width:100%;margin-top:14px;background:var(--ok);color:#fff;border:none;border-radius:9px;padding:11px;font-size:15px;font-weight:700;cursor:pointer}
+  .submitbtn:hover{background:#15623a}
+  .progress{margin-top:10px;font-size:12.5px;color:var(--muted);text-align:center}
+  /* ===== Main ===== */
+  main{flex:1;min-width:0}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px 28px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .qhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .qnum{background:var(--pp);color:#fff;border-radius:7px;padding:3px 11px;font-weight:700;font-size:14px}
+  .qmod{font-size:12.5px;color:var(--muted);background:var(--pp-light);border-radius:6px;padding:3px 9px}
+  .qtext{font-size:17px;font-weight:600;margin:10px 0 18px;color:var(--pp-dark)}
+  .opts{display:flex;flex-direction:column;gap:11px}
+  .opt{display:flex;gap:11px;align-items:flex-start;border:1.5px solid #d8dee6;border-radius:10px;padding:12px 15px;cursor:pointer;font-size:15px;transition:.12s}
+  .opt:hover{border-color:var(--pp);background:#f7faff}
+  .opt.sel{border-color:var(--pp);background:var(--pp-light)}
+  .opt .key{font-weight:700;color:var(--pp);flex:0 0 22px}
+  .opt input{margin-top:3px}
+  .navrow{display:flex;justify-content:space-between;margin-top:22px;gap:10px}
+  .navrow button{background:#fff;border:1.5px solid var(--pp);color:var(--pp);border-radius:9px;padding:10px 22px;font-size:14.5px;font-weight:600;cursor:pointer}
+  .navrow button:hover:not(:disabled){background:var(--pp);color:#fff}
+  .navrow button:disabled{opacity:.4;cursor:default}
+  /* ===== Result ===== */
+  .result{background:#fff;border:1px solid var(--line);border-radius:12px;padding:26px 30px;margin-bottom:18px}
+  .scorebig{font-size:54px;font-weight:800;line-height:1}
+  .scorebig.pass{color:var(--ok)} .scorebig.fail{color:var(--bad)}
+  .verdict{font-size:20px;font-weight:700;margin:6px 0}
+  .verdict.pass{color:var(--ok)} .verdict.fail{color:var(--bad)}
+  .statline{color:var(--muted);font-size:14.5px;margin:3px 0}
+  .actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+  .actions button{border:none;border-radius:9px;padding:11px 20px;font-size:14.5px;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--pp);color:#fff} .btn-primary:hover{background:var(--pp-dark)}
+  .btn-ghost{background:#eef1f5;color:#333;border:1px solid var(--line)!important} .btn-ghost:hover{background:#e2e6ec}
+  /* review */
+  .rev{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 20px;margin-bottom:12px}
+  .rev .rh{display:flex;gap:9px;align-items:center;font-weight:600;color:var(--pp-dark);font-size:15px;margin-bottom:8px}
+  .rev .badge{font-size:12px;font-weight:700;border-radius:6px;padding:2px 9px;color:#fff}
+  .rev .badge.ok{background:var(--ok)} .rev .badge.bad{background:var(--bad)}
+  .rev .ro{font-size:14px;padding:6px 11px;border-radius:7px;margin:4px 0}
+  .rev .ro.c{background:var(--okbg);border-left:4px solid var(--ok)}
+  .rev .ro.w{background:var(--badbg);border-left:4px solid var(--bad)}
+  .rev .ro.n{color:#555}
+  .rev .expl{font-size:13.5px;color:#444;background:#f6f8fb;border-radius:8px;padding:9px 12px;margin-top:8px}
+  .rev .expl.flag{background:var(--warnbg);border-left:4px solid var(--warn)}
+  /* review retry mode */
+  .retry-head{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:10px;font-weight:600;color:var(--pp-dark);font-size:16px}
+  .ropt{display:block;width:100%;text-align:left;border:1.5px solid #d8dee6;border-radius:9px;padding:11px 14px;margin:6px 0;background:#fff;font-size:14.5px;cursor:pointer;font-family:inherit;color:var(--ink);line-height:1.5}
+  .ropt:hover:not(:disabled){border-color:var(--pp);background:#f7faff}
+  .ropt:disabled{cursor:default}
+  .ropt.correct{background:var(--okbg);border-color:var(--ok);color:#13593a;font-weight:600}
+  .ropt.wrong{background:var(--badbg);border-color:var(--bad);opacity:.75;text-decoration:line-through}
+  .ropt b{color:var(--pp);margin-right:6px}
+  .reveal{background:#eef1f5;border:1px solid var(--line);color:#556;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;margin-top:8px}
+  .reveal:hover{background:#e2e6ec}
+  /* ===== Start screen ===== */
+  .start-wrap{max-width:680px;margin:40px auto;padding:0 16px}
+  .startcard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:38px 32px;text-align:center;box-shadow:0 4px 18px rgba(43,87,154,.10)}
+  .start-hero{font-size:54px;margin-bottom:6px}
+  .startcard h2{color:var(--pp-dark);margin:4px 0 8px;font-size:24px}
+  .start-meta{color:var(--muted);font-size:14px;margin-bottom:22px}
+  .start-stats{display:flex;justify-content:center;gap:14px;margin:18px 0;flex-wrap:wrap}
+  .start-stats>div{background:var(--pp-light);border-radius:12px;padding:14px 20px;min-width:92px}
+  .start-stats b{display:block;font-size:26px;color:var(--pp-dark)}
+  .start-stats span{font-size:12.5px;color:var(--muted)}
+  .start-mods{font-size:13.5px;color:#555;margin-bottom:24px}
+  .startbtn{background:var(--ok);color:#fff;border:none;border-radius:12px;padding:15px 40px;font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(27,127,75,.3)}
+  .startbtn:hover{background:#15623a}
+  .start-note{margin-top:18px;font-size:13px;color:var(--warn);background:var(--warnbg);border-radius:9px;padding:10px 14px}
+  /* ===== Login ===== */
+  .login-overlay{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,var(--pp),var(--pp-dark))}
+  .login-card{background:#fff;border-radius:18px;padding:34px 30px;width:100%;max-width:390px;box-shadow:0 14px 44px rgba(0,0,0,.28);text-align:center}
+  .login-card .logo{font-size:46px;line-height:1}
+  .login-card h2{color:var(--pp-dark);margin:8px 0 4px;font-size:21px}
+  .login-card p.s{color:var(--muted);font-size:13px;margin:0 0 20px}
+  .login-field{text-align:left;margin-bottom:14px}
+  .login-field label{display:block;font-size:13px;color:#445;margin-bottom:5px;font-weight:600}
+  .login-field input{width:100%;border:1.5px solid #d8dee6;border-radius:10px;padding:12px 14px;font-size:15px;font-family:inherit}
+  .login-field input:focus{outline:none;border-color:var(--pp)}
+  .login-btn{width:100%;background:var(--pp);color:#fff;border:none;border-radius:10px;padding:13px;font-size:16px;font-weight:700;cursor:pointer;margin-top:6px}
+  .login-btn:hover{background:var(--pp-dark)}
+  .login-err{background:var(--badbg);color:var(--bad);border-radius:8px;padding:9px 12px;font-size:13.5px;margin-bottom:12px;display:none}
+  .login-hint{margin-top:16px;font-size:12px;color:#999}
+  /* user chip + logout */
+  .userchip{display:flex;align-items:center;gap:9px;font-size:13.5px;color:#fff}
+  .logoutbtn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .logoutbtn:hover{background:rgba(255,255,255,.28)}
+  /* history */
+  .histbox{margin-top:26px;text-align:left}
+  .histbox h3{color:var(--pp);font-size:15px;margin:0 0 8px}
+  .histtable{width:100%;font-size:13.5px;border-collapse:collapse}
+  .histtable th,.histtable td{border:1px solid var(--line);padding:7px 9px;text-align:center}
+  .histtable th{background:var(--pp-light);color:var(--pp-dark)}
+  .hist-empty{color:var(--muted);font-size:13px}
+  .hide{display:none}
+  code{background:#eef0f3;padding:1px 6px;border-radius:5px;font-family:Consolas,monospace;font-size:.9em;color:#1e3c6e}
+  @media(max-width:820px){.wrap{flex-direction:column}aside{position:static;width:100%;flex:none}}
+</style>
+</head>
+<body>
+
+<!-- ===== MÀN HÌNH ĐĂNG NHẬP ===== -->
+<div id="loginView" class="login-overlay">
+  <form class="login-card" onsubmit="doLogin(event)">
+    <div class="logo">🖥️</div>
+    <h2>Phòng thi thử Tin học Nâng cao</h2>
+    <p class="s">Đăng nhập để vào thi và lưu lịch sử điểm</p>
+    <div class="login-err" id="loginErr">Sai tên đăng nhập hoặc mật khẩu.</div>
+    <div class="login-field"><label>Tên đăng nhập</label><input id="inpUser" autocomplete="username" placeholder="username"></div>
+    <div class="login-field"><label>Mật khẩu</label><input id="inpPass" type="password" autocomplete="current-password" placeholder="••••••"></div>
+    <button class="login-btn" type="submit">Đăng nhập</button>
+    <div class="login-hint">Tài khoản mặc định: <b>hocvien</b> / <b>123456</b></div>
+  </form>
+</div>
+
+<div class="topbar hide" id="topbar">
+  <div>
+    <h1>🖥️ Phòng thi thử — Trắc nghiệm Tin học Nâng cao</h1>
+    <div class="sub" id="examMeta">Đề: A211PC10 · DethiNC07062025C1607 · đợt 07/06/2025</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="userchip"><span>👤 <b id="userName"></b></span><button class="logoutbtn" onclick="doLogout()">Đăng xuất</button></div>
+  <select class="examsel" id="examSel" onchange="loadExam(this.value)"></select>
+  <div class="timer" id="timer">40:00</div>
+</div>
+
+<div id="startView" class="start-wrap hide">
+  <div class="startcard" id="startBox"><!-- start screen injected --></div>
+</div>
+
+<div class="wrap hide" id="examView">
+  <aside>
+    <h3>Câu hỏi</h3>
+    <div class="grid" id="grid"></div>
+    <div class="progress" id="progress">Đã làm 0/0</div>
+    <button class="submitbtn" onclick="submitExam()">📨 Nộp bài &amp; chấm điểm</button>
+    <div class="legend">
+      <span><i class="dot"></i> Chưa làm</span>
+      <span><i class="dot" style="background:var(--pp);border-color:var(--pp)"></i> Đã chọn</span>
+      <span><i class="dot" style="outline:2px solid var(--cur)"></i> Câu hiện tại</span>
+    </div>
+  </aside>
+
+  <main>
+    <div class="card" id="qcard"><!-- question injected --></div>
+  </main>
+</div>
+
+<div class="wrap hide" id="resultView">
+  <main style="flex:1">
+    <div class="result" id="resultBox"></div>
+    <div id="reviewList"></div>
+  </main>
+</div>
+
+<script>
+/* =========================================================================
+   DỮ LIỆU ĐỀ THI  —  thêm đề mới: thêm một entry vào object EXAMS.
+   Mỗi câu: { q: "đề bài", m:"môn", o:["A","B","C","D"], a: chỉ-số-đáp-án-đúng (0..3),
+              e:"giải thích", flag:true (nếu đáp án cần đối chiếu lại) }
+   ========================================================================= */
+const EXAMS = {
+  "A211PC10": {
+    meta: "Đề: A211PC10 · DethiNC07062025C1607 · đợt 07/06/2025",
+    minutes: 40,
+    questions: [
+      // ---------- EXCEL (1–10) ----------
+      {m:"Excel", q:"Trong Excel 2010, chọn phát biểu đúng.",
+        o:["Header không cho hiển thị số trang","Footer sử dụng đánh số trang phải bắt đầu từ số 1","Header chỉ áp dụng cho trang tính được chọn","Header cho phép đánh số trang bắt đầu từ số bất kỳ"],
+        a:3, e:"Trong Page Setup → tab Page → 'First page number' có thể đặt số bắt đầu bất kỳ; số trang đặt được ở cả Header lẫn Footer."},
+      {m:"Excel", q:"Trong Excel 2010, sau khi thao tác trên bảng tính và muốn lưu lại như một mẫu để dùng sau này, ta lưu dưới dạng:",
+        o:["*.csv","*.pdf","*.xltx","*.xlsx"], a:2, e:"Mẫu (Template) của Excel có phần mở rộng .xltx."},
+      {m:"Excel", q:"Trong Excel 2010, tự động định dạng, kiểu cách cho một vùng ô được hiểu là?",
+        o:["Sử dụng định dạng mẫu (có sẵn) để định dạng cho vùng dữ liệu","Không thể tùy chỉnh được định dạng mẫu (có sẵn)","Chỉ sử dụng định dạng mẫu (có sẵn) cho dữ liệu số","Chỉ sử dụng định dạng mẫu (có sẵn) định dạng bảng tính hiện hành"],
+        a:0, e:"Cell Styles / Format as Table = áp định dạng mẫu có sẵn cho vùng dữ liệu (đối chiếu ngân hàng Câu 300 — đáp án A)."},
+      {m:"Excel", q:"Trong Excel 2010, ô A1=\"123\", để ô A2 trả về giá trị số của ô A1, ta thực hiện hàm:",
+        o:["LEFT(A1)","VALUE(A1)","CHAR(A1)","FIXED(A1)"], a:1, e:"VALUE() đổi chuỗi số (text) thành số thực sự."},
+      {m:"Excel", q:"Trong Excel 2010, khi sử dụng tham chiếu địa chỉ $A5:",
+        o:["Cột A giữ cố định","Cột A và hàng 5 đều thay đổi","Hàng 5 giữ cố định","Cột A và hàng 5 cố định"],
+        a:0, e:"Dấu $ trước A → khóa CỘT A; hàng 5 không có $ nên thay đổi khi sao chép."},
+      {m:"Excel", q:"Trong Excel 2010, để thêm dữ liệu vào trục thứ 2 (thêm chuỗi) vào biểu đồ, chuột phải vào biểu đồ, chọn:",
+        o:["Select Data\\Add","Select Data\\Remove","Select Data\\Edit","Switch Row\\Column"],
+        a:0, e:"Add = thêm một chuỗi dữ liệu (series) mới vào biểu đồ."},
+      {m:"Excel", q:"Trong Excel 2010, để thêm một biểu đồ nhỏ trong ô tính, ta thao tác:",
+        o:["Insert\\Lines","Insert\\Illustrations","Insert\\Sparklines","Insert\\Charts"],
+        a:2, e:"Sparklines = biểu đồ mini nằm gọn trong một ô."},
+      {m:"Excel", q:"Trong Excel 2010, để xóa liên kết trong ô, ta thao tác:",
+        o:["Insert\\Links\\Hyperlink\\Create New Document","Insert\\Links\\Hyperlink\\E-mail Address","Insert\\Links\\Hyperlink\\Remove Link","Insert\\Links\\Hyperlink\\Place in This Document"],
+        a:2, e:"Remove Link = gỡ bỏ siêu liên kết."},
+      {m:"Excel", q:"Trong Excel 2010, sắp xếp dữ liệu theo yêu cầu là:",
+        o:["Sắp theo thứ tự tăng dần","Sắp theo thứ tự giảm dần","Có thể sắp xếp theo màu ký tự","Sắp theo thứ tự được định nghĩa trước"],
+        a:2, flag:true, e:"⚠️ Đáp án nên đối chiếu lại bản gốc. Excel 2010 cho phép Sort theo màu ô/màu chữ (Sort On: Font Color/Cell Color) — đây là đặc điểm hay được hỏi."},
+      {m:"Excel", q:"Trong Excel 2010, kết quả của hàm SUMSQ(5,9) là?",
+        o:["107","104","105","106"], a:3, e:"SUMSQ = tổng bình phương: 5² + 9² = 25 + 81 = 106 (đối chiếu ngân hàng Câu 331)."},
+      // ---------- MS PROJECT (11–20) ----------
+      {m:"MS Project", q:"Hãy cho biết khái niệm nào sau đây là khái niệm đúng về dự án?",
+        o:["Dự án là một sự cố gắng nhất định nhằm tạo ra sản phẩm hay dịch vụ trong khoảng thời gian KHÔNG giới hạn","Dự án là một khối lượng công việc cần thực hiện nhằm cho các kết quả và mục tiêu nhất định trong giới hạn về quy mô, phạm vi, thời gian, chi phí, tài nguyên cho trước","Dự án là một khối lượng công việc cần thực hiện tạo ra sản phẩm/dịch vụ nhất định trong giới hạn về quy mô, phạm vi, thời gian, chi phí, tài nguyên cho trước","Dự án là nhiệm vụ cần hoàn thành để có một sản phẩm/dịch vụ duy nhất, trong một thời hạn cho và kinh phí KHÔNG giới hạn"],
+        a:2, flag:true, e:"⚠️ Các phương án trong ảnh đề rất giống nhau, nên đối chiếu bản gốc. Định nghĩa đúng nhấn mạnh: tạo ra sản phẩm/dịch vụ trong GIỚI HẠN về quy mô, thời gian, chi phí, tài nguyên (loại 2 phương án nói 'không giới hạn')."},
+      {m:"MS Project", q:"Để đảm bảo dự án đi đúng hướng thì cần quản lý, kiểm tra mọi mục tiêu và phạm vi công việc:",
+        o:["Khi dự án kết thúc","Khi dự án có rủi ro phát sinh","Khi dự án thực hiện","Khi dự án bắt đầu"],
+        a:3, e:"Đối chiếu ngân hàng (Câu 398): đáp án 'Khi dự án bắt đầu' — phải xác định, kiểm soát mục tiêu/phạm vi ngay từ đầu."},
+      {m:"MS Project", q:"Biểu đồ Gantt là biểu đồ cho biết:",
+        o:["Mối quan hệ tương đối giữa các công việc","Thời gian thực hiện từng công việc","Ngày bắt đầu, ngày kết thúc từng công việc","Thời gian thực hiện từng công việc, ngày bắt đầu/kết thúc và mối quan hệ tương đối giữa các công việc"],
+        a:3, e:"Gantt thể hiện ĐẦY ĐỦ: thời lượng, ngày bắt đầu/kết thúc và quan hệ giữa các công việc (ngân hàng Câu 361 — chọn phương án bao trùm)."},
+      {m:"MS Project", q:"Nhận định nào sau đây KHÔNG đúng với dự án kinh doanh:",
+        o:["Dự án là một tổng thể các chính sách, hoạt động và chi phí liên quan với nhau được hoạch định nhằm đạt mục tiêu","Dự án có một sản phẩm được xác định một cách rõ ràng, mục tiêu cụ thể","Dự án luôn có thời điểm bắt đầu và kết thúc cụ thể","Dự án là một chính sách kinh doanh"],
+        a:3, e:"Dự án KHÁC chính sách: dự án có điểm đầu–cuối, sản phẩm/mục tiêu cụ thể; nói 'dự án là một chính sách kinh doanh' là sai."},
+      {m:"MS Project", q:"Đâu là các công việc chính trong quản lý dự án:",
+        o:["Cung cấp chi phí và nguồn lực cho dự án","Lập kế hoạch, quản lý tiến độ, chi phí và nhân lực cho dự án","Cung cấp các thông tin liên quan đến dự án","Thực hiện công việc được phân công trong dự án"],
+        a:1, e:"Quản lý dự án = lập kế hoạch + quản lý tiến độ + chi phí + nhân lực."},
+      {m:"MS Project", q:"Trong Microsoft Project, loại lịch bắt đầu từ thứ 2 đến thứ 6, từ 8h sáng đến 17h chiều và mỗi ngày nghỉ 1h gọi là:",
+        o:["Day Shift","Standard","Night Shift","24 Hours"], a:1, e:"Lịch hành chính T2–T6, 8h–17h nghỉ trưa = Standard."},
+      {m:"MS Project", q:"Trong Microsoft Project, loại lịch KHÔNG có thời gian nghỉ gọi là:",
+        o:["24 Hours","Over Time","Night Shift","Standard"], a:0, e:"24 Hours = làm liên tục, không có giờ nghỉ."},
+      {m:"MS Project", q:"Sắp xếp lại Quy trình LẬP KẾ HOẠCH dự án (1.Xác định yêu cầu · 2.Xác định nhân công, chi phí · 3.Xác định rủi ro · 4.Phân rã công việc · 5.Xây dựng lịch trình · …):",
+        o:["1 → 9 → 4 → 2 → 5 → 3 → 6 → 7 → 8","1 → 4 → 9 → 2 → 5 → 3 → 7 → 6 → 8","1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9","1 → 9 → 4 → 3 → 5 → 2 → 6 → 7 → 8"],
+        a:0, flag:true, e:"⚠️ Câu sắp xếp thứ tự — nên đối chiếu kỹ bản gốc. Theo ngân hàng (Câu 347): 1→9→4→2→5→3→6→7→8."},
+      {m:"MS Project", q:"Sắp xếp lại Quy trình GIÁM SÁT và ĐIỀU CHỈNH dự án (1.Theo dõi vấn đề phát sinh · …):",
+        o:["2 → 3 → 4 → 5 → 1 → 6 → 7 → 8","1 → 2 → 3 → 4 → 5 → 6 → 7 → 8","1 → 5 → 2 → 3 → 4 → 6 → 7 → 8","3 → 4 → 5 → 1 → 2 → 6 → 7 → 8"],
+        a:1, flag:true, e:"⚠️ Câu sắp xếp thứ tự — nên đối chiếu kỹ bản gốc. Theo ngân hàng (Câu 403): 1→2→3→4→5→6→7→8."},
+      {m:"MS Project", q:"Mục đích của quản lý thời gian?",
+        o:["Giúp dự án hoàn thành đúng thời hạn trên cơ sở đảm bảo chất lượng","Giúp dự án hoàn thành đúng thời hạn tiến độ","Giúp dự án hoàn thành đúng thời hạn và trong phạm vi ngân sách cho phép","Giúp dự án hoàn thành đúng thời hạn và đảm bảo chất lượng"],
+        a:1, flag:true, e:"⚠️ Nên đối chiếu bản gốc. 'Quản lý thời gian' nhắm riêng vào việc hoàn thành ĐÚNG TIẾN ĐỘ/thời hạn (các yếu tố chi phí, chất lượng thuộc quản lý khác)."},
+      // ---------- POWERPOINT (21–30) ----------
+      {m:"PowerPoint", q:"Chế độ hiển thị nào sau đây KHÔNG phải là chế độ hiển thị của Slide trong PowerPoint 2010?",
+        o:["Slide Sorter","Master Views","Normal","Reading View"], a:1, e:"Normal / Slide Sorter / Reading View là chế độ xem slide; 'Master Views' là nhóm chỉnh Master, không phải chế độ xem (ngân hàng Câu 186)."},
+      {m:"PowerPoint", q:"Trong PowerPoint 2010, khi dùng chế độ hiển thị Reading View thì:",
+        o:["Được dùng để trình chiếu bài trình diễn lúc báo cáo trước khách dự hội thảo","Tất cả A, B, C đều đúng","Để xem trước và biên tập bài trình diễn trước khi trình chiếu","Bài trình diễn chiếu ở chế độ toàn màn hình với các hiệu ứng hoạt hình và phép biến đổi sinh động"],
+        a:1, e:"Đối chiếu ngân hàng (Câu 149): đáp án 'Tất cả … đều đúng'."},
+      {m:"PowerPoint", q:"Trong PowerPoint 2010, muốn chèn các Slide từ 1 tập tin khác vào tập tin đang mở, ta dùng:",
+        o:["Insert\\Slides\\New Slide","Insert\\Slides\\Slides from Outline","Insert\\Slides\\Duplicate Slide","Insert\\Slides\\Reuse slides\\Open a PowerPoint 2010 File"],
+        a:3, e:"Reuse Slides cho phép lấy slide từ file PowerPoint khác."},
+      {m:"PowerPoint", q:"Trong PowerPoint 2010, muốn thêm các Header và Footer vào các slide ta thực hiện:",
+        o:["Các câu trên đều sai","View\\Header and Footer","View\\Notes Page","Insert\\Header and Footer"],
+        a:3, e:"Header & Footer nằm ở thẻ Insert."},
+      {m:"PowerPoint", q:"Trong PowerPoint 2010, để định dạng một trang in, ta thực hiện:",
+        o:["Các câu trên đều sai","File\\Page Setup","File\\Print","File\\Print Preview"],
+        a:1, e:"Page Setup để thiết lập khổ/hướng trang in (ngân hàng Câu 138)."},
+      {m:"PowerPoint", q:"Khi soạn thảo nhiều trình chiếu cùng lúc trong PowerPoint 2010, muốn hiện TẤT CẢ các cửa sổ trên màn hình CHỒNG lên nhau:",
+        o:["View\\Window\\Arrange All","View\\Window\\Cascade","View\\Window\\Switch Windows","View\\Window\\New Windows"],
+        a:1, e:"'Chồng lên nhau' (xếp tầng) = Cascade; Arrange All thì xếp cạnh nhau (ngân hàng Câu 150)."},
+      {m:"PowerPoint", q:"Khi đang soạn thảo PowerPoint 2010, muốn quay về slide đầu tiên, cách làm nào sau đây KHÔNG đúng?",
+        o:["Ấn phím Home","Di chuyển chuột đến slide đầu tiên","Ấn tổ hợp phím Alt + Home","Ấn tổ hợp phím Ctrl + Home"],
+        a:2, e:"Alt+Home không đưa về slide đầu; Home / Ctrl+Home / click slide đầu thì được."},
+      {m:"PowerPoint", q:"Khi đang soạn thảo PowerPoint 2010, muốn đi đến slide cuối cùng, cách làm nào sau đây KHÔNG đúng?",
+        o:["Ấn phím End","Ấn tổ hợp phím Ctrl + End","Dùng phím PgUp liên tục đến khi dừng","Dùng phím PgDn liên tục đến khi dừng"],
+        a:2, e:"PgUp đi LÊN (về đầu) nên không thể tới slide cuối; PgDn mới đi xuống."},
+      {m:"PowerPoint", q:"Trong PowerPoint 2010, để căn nội dung văn bản về bên phải ta dùng lệnh nào?",
+        o:["Ctrl + K","Ctrl + L","Ctrl + E","Ctrl + R"], a:3, e:"Ctrl+R = canh phải (Right). (L=trái, E=giữa, J=đều)."},
+      {m:"PowerPoint", q:"Tạo hiệu ứng cho 2 đối tượng A, B trong 1 slide; B được đặt thời gian xuất hiện sau A là 5 giây (After Previous). Khi trình chiếu:",
+        o:["Khi A xuất hiện, nếu người dùng nhấp chuột thì 5 giây sau B mới xuất hiện","B luôn xuất hiện sau A là 5 giây, bất chấp người dùng có nhấp chuột hay không","Sau khi A xuất hiện, người dùng nhấp chuột thì B mới xuất hiện","Sau khi A xuất hiện, cứ 5 giây B lại xuất hiện 1 lần"],
+        a:1, e:"After Previous + Delay 5s = B tự động hiện 5 giây sau A, không cần nhấp chuột."},
+      // ---------- WORD (31–40) ----------
+      {m:"Word", q:"Để tìm mẫu văn bản có sẵn trong Word 2010, ta tìm theo phần mở rộng tập tin là:",
+        o:[".doct",".docx",".doc",".dotx"], a:3, e:"Mẫu (Template) của Word có đuôi .dotx."},
+      {m:"Word", q:"Muốn chèn biểu tượng đầu dòng tự động cho đoạn văn bản trong Word 2010, ta chọn:",
+        o:["Home\\Paragraph\\Multilevel List","Home\\Paragraph\\Numbering","Home\\Paragraph\\Bullets","Home\\Paragraph\\Center"],
+        a:2, e:"Bullets = ký hiệu (biểu tượng) đầu dòng; Numbering là đánh số."},
+      {m:"Word", q:"Muốn định dạng căn lề giữa trong Word 2010, ta chọn:",
+        o:["Home\\Paragraph\\Align Left","Home\\Paragraph\\Justify","Home\\Paragraph\\Center","Home\\Paragraph\\Align Right"],
+        a:2, e:"Center = canh giữa (Ctrl+E)."},
+      {m:"Word", q:"Muốn mở tài liệu đã có trên ổ đĩa trong Word 2010, ta dùng:",
+        o:["File\\Save","File\\New","File\\Open","File\\Close"], a:2, e:"Open để mở tài liệu đã có (Ctrl+O)."},
+      {m:"Word", q:"Để bức hình chèn vào văn bản hiển thị ẩn SAU văn bản trong Word 2010, ta dùng:",
+        o:["Layout Option\\Text Wrapping\\Behind Text","Layout Option\\Text Wrapping\\Tight","Layout Option\\Text Wrapping\\In Front of Text","Layout Option\\Text Wrapping\\In Line with Text"],
+        a:0, e:"Behind Text = đưa hình ra sau (nền) chữ; In Front of Text là phủ lên trên chữ."},
+      {m:"Word", q:"Trong Word 2010, tổ hợp phím nào đưa con trỏ ngay lập tức về DÒNG CUỐI CÙNG của văn bản:",
+        o:["Ctrl + End","Ctrl + Alt + End","Shift + End","Alt + End"], a:0, e:"Ctrl+End nhảy tới cuối tài liệu; End chỉ về cuối dòng hiện hành."},
+      {m:"Word", q:"Trong Word 2010, để thiết lập đường thẳng ngăn giữa các cột văn bản, ta chọn:",
+        o:["Page Layout\\Page Setup\\Columns\\Width and Spacing","Page Layout\\Page Setup\\Columns\\Left","Page Layout\\Page Setup\\Columns\\Right","Page Layout\\Page Setup\\Columns\\More Columns\\Line Between"],
+        a:3, e:"Tùy chọn 'Line between' trong More Columns kẻ đường ngăn giữa các cột."},
+      {m:"Word", q:"Muốn chọn căn chỉnh dữ liệu trong bảng trong Word 2010, ta chọn:",
+        o:["Table Tools\\Layout\\Alignment","Table Tools\\Layout\\Merge Cells","Table Tools\\Layout\\Tables","Table Tools\\Layout\\Cell Size"],
+        a:0, e:"Nhóm Alignment (trong Table Tools→Layout) căn chỉnh dữ liệu trong ô bảng."},
+      {m:"Word", q:"Trong Word 2010, muốn thiết lập lề trên, dưới, trái, phải, ta chọn:",
+        o:["Page Layout\\Page Setup\\Save as Default","Page Layout\\Page Setup\\Margins","Page Layout\\Page Setup\\Pages","Page Layout\\Page Setup\\Orientation"],
+        a:1, e:"Margins = thiết lập lề; Orientation là hướng giấy."},
+      {m:"Word", q:"Trong Word 2010, bạn lựa chọn khu vực nào để thể hiện rằng mình muốn in 4 bản:",
+        o:["File\\Print\\Settings\\Pages","File\\Print\\Print","File\\Print\\Printer","File\\Print\\Copies"],
+        a:3, e:"Copies = số bản in."}
+    ]
+  }
+};
+
+/* ===================== TÀI KHOẢN ĐĂNG NHẬP ===================== */
+/* 👉 Sửa/thêm tài khoản ở đây. name = tên hiển thị (thí sinh). */
+const USERS = [
+  { u:"hocvien", p:"123456", name:"Học viên" }
+  // , { u:"kido", p:"matkhau", name:"Kí Đặng" }
+];
+let currentUser = null;
+
+function doLogin(e){
+  if(e) e.preventDefault();
+  const u=document.getElementById("inpUser").value.trim();
+  const p=document.getElementById("inpPass").value;
+  const acc=USERS.find(x=>x.u.toLowerCase()===u.toLowerCase() && x.p===p);
+  if(!acc){ document.getElementById("loginErr").style.display="block"; return; }
+  currentUser=acc;
+  try{ sessionStorage.setItem("ttn_user", acc.u); }catch(err){}
+  enterApp();
+}
+function enterApp(){
+  document.getElementById("loginErr").style.display="none";
+  document.getElementById("loginView").classList.add("hide");
+  document.getElementById("topbar").classList.remove("hide");
+  document.getElementById("userName").textContent=currentUser.name;
+  loadExam(Object.keys(EXAMS)[0]);
+}
+function doLogout(){
+  if(!confirm("Đăng xuất khỏi tài khoản này?")) return;
+  if(timerId) clearInterval(timerId);
+  currentUser=null;
+  try{ sessionStorage.removeItem("ttn_user"); }catch(err){}
+  ["topbar","startView","examView","resultView"].forEach(id=>document.getElementById(id).classList.add("hide"));
+  document.getElementById("loginView").classList.remove("hide");
+  document.getElementById("inpPass").value="";
+}
+
+/* ===== Lịch sử điểm (lưu theo từng tài khoản trên trình duyệt) ===== */
+function histKey(){ return "ttn_hist_"+currentUser.u; }
+function getHistory(){ try{ return JSON.parse(localStorage.getItem(histKey()))||[]; }catch(e){ return []; } }
+function saveScore(rec){ try{ const h=getHistory(); h.unshift(rec); localStorage.setItem(histKey(), JSON.stringify(h.slice(0,50))); }catch(e){} }
+function historyHTML(){
+  const h=getHistory();
+  let inner;
+  if(!h.length) inner=`<div class="hist-empty">Chưa có lần thi nào. Hãy bắt đầu thi!</div>`;
+  else{
+    inner=`<table class="histtable"><thead><tr><th>Lần</th><th>Đề</th><th>Điểm</th><th>Đúng</th><th>Thời gian nộp</th></tr></thead><tbody>`;
+    h.forEach((r,i)=>{ inner+=`<tr><td>${h.length-i}</td><td>${r.exam}</td><td style="font-weight:700;color:${r.score>=5?'var(--ok)':'var(--bad)'}">${r.score.toFixed(1)}</td><td>${r.correct}/${r.total}</td><td>${r.date}</td></tr>`; });
+    inner+=`</tbody></table>`;
+  }
+  return `<div class="histbox"><h3>📊 Lịch sử điểm của ${currentUser.name}</h3>${inner}</div>`;
+}
+
+/* ===================== ENGINE ===================== */
+let exam, curKey=null, cur=0, answers=[], submitted=false, timeLeft=0, timerId=null;
+
+/* Chọn/đổi đề → về MÀN HÌNH BẮT ĐẦU (đồng hồ CHƯA chạy) */
+function loadExam(key){
+  curKey = key; exam = EXAMS[key];
+  cur=0; submitted=false; answers = new Array(exam.questions.length).fill(null);
+  if(timerId) clearInterval(timerId);
+  document.getElementById("examMeta").textContent = exam.meta;
+  const t=document.getElementById("timer");
+  t.textContent = String(exam.minutes).padStart(2,"0")+":00"; t.classList.remove("low");
+  document.getElementById("examView").classList.add("hide");
+  document.getElementById("resultView").classList.add("hide");
+  document.getElementById("startView").classList.remove("hide");
+  renderStart(); window.scrollTo(0,0);
+}
+
+function renderStart(){
+  const total=exam.questions.length;
+  const mods=exam.questions.reduce((a,q)=>{a[q.m]=(a[q.m]||0)+1;return a;},{});
+  const modstr=Object.entries(mods).map(([k,v])=>`${k} (${v})`).join(" · ");
+  document.getElementById("startBox").innerHTML=`
+    <div class="start-hero">📝</div>
+    <h2>Sẵn sàng thi thử?</h2>
+    <div class="start-meta">${exam.meta}</div>
+    <div class="start-stats">
+      <div><b>${total}</b><span>câu hỏi</span></div>
+      <div><b>${exam.minutes}'</b><span>thời gian</span></div>
+      <div><b>5.0</b><span>điểm đạt</span></div>
+    </div>
+    <div class="start-mods">${modstr}</div>
+    <button class="startbtn" onclick="startExam()">▶ Bắt đầu thi</button>
+    <div class="start-note">⏱️ Đồng hồ chỉ bắt đầu đếm khi bạn bấm "Bắt đầu thi". Hết giờ sẽ tự động nộp bài.</div>
+    ${historyHTML()}`;
+}
+
+/* Bấm Bắt đầu thi → vào đề, đồng hồ chạy */
+function startExam(){
+  document.getElementById("startView").classList.add("hide");
+  document.getElementById("examView").classList.remove("hide");
+  buildGrid(); renderQ(); startTimer(exam.minutes*60); window.scrollTo(0,0);
+}
+
+function buildGrid(){
+  const g=document.getElementById("grid"); g.innerHTML="";
+  exam.questions.forEach((_,i)=>{
+    const b=document.createElement("button");
+    b.className="qbtn"; b.textContent=i+1; b.onclick=()=>{cur=i;renderQ();};
+    g.appendChild(b);
+  });
+  refreshGrid();
+}
+function refreshGrid(){
+  const btns=document.querySelectorAll("#grid .qbtn");
+  btns.forEach((b,i)=>{
+    b.className="qbtn";
+    if(submitted){ b.classList.add(answers[i]===exam.questions[i].a?"correct":"wrong"); }
+    else if(answers[i]!==null) b.classList.add("answered");
+    if(i===cur && !submitted) b.classList.add("current");
+  });
+  const done=answers.filter(x=>x!==null).length;
+  document.getElementById("progress").textContent=`Đã làm ${done}/${exam.questions.length}`;
+}
+
+function renderQ(){
+  const q=exam.questions[cur];
+  const keys=["A","B","C","D"];
+  let html=`<div class="qhead"><span class="qnum">Câu ${cur+1}/${exam.questions.length}</span><span class="qmod">${q.m}</span></div>
+    <div class="qtext">${q.q}</div><div class="opts">`;
+  q.o.forEach((opt,i)=>{
+    const sel = answers[cur]===i ? "sel":"";
+    html+=`<label class="opt ${sel}"><input type="radio" name="opt" ${answers[cur]===i?"checked":""} onclick="choose(${i})">
+      <span class="key">${keys[i]}.</span><span>${opt}</span></label>`;
+  });
+  html+=`</div><div class="navrow">
+      <button onclick="go(-1)" ${cur===0?"disabled":""}>← Câu trước</button>
+      <button onclick="go(1)" ${cur===exam.questions.length-1?"disabled":""}>Câu sau →</button>
+    </div>`;
+  document.getElementById("qcard").innerHTML=html;
+  refreshGrid();
+}
+function choose(i){ answers[cur]=i; renderQ(); }
+function go(d){ cur=Math.min(exam.questions.length-1,Math.max(0,cur+d)); renderQ(); }
+
+function startTimer(sec){
+  timeLeft=sec; if(timerId) clearInterval(timerId);
+  updateTimer();
+  timerId=setInterval(()=>{ timeLeft--; updateTimer(); if(timeLeft<=0){clearInterval(timerId); submitExam(true);} },1000);
+}
+function updateTimer(){
+  const m=String(Math.floor(timeLeft/60)).padStart(2,"0"), s=String(timeLeft%60).padStart(2,"0");
+  const t=document.getElementById("timer"); t.textContent=`${m}:${s}`;
+  t.classList.toggle("low", timeLeft<=120);
+}
+
+function submitExam(auto=false){
+  if(!auto){
+    const done=answers.filter(x=>x!==null).length;
+    const blank=exam.questions.length-done;
+    let msg = blank>0 ? `Bạn còn ${blank} câu CHƯA làm. Vẫn nộp bài?` : "Nộp bài và chấm điểm?";
+    if(!confirm(msg)) return;
+  }
+  submitted=true; if(timerId) clearInterval(timerId);
+  const total=exam.questions.length;
+  let correct=0; answers.forEach((a,i)=>{ if(a===exam.questions[i].a) correct++; });
+  const score=Math.round(correct/total*100)/10;     // /10
+  const pass=score>=5;
+  const usedSec=exam.minutes*60-timeLeft;
+  const um=String(Math.floor(usedSec/60)).padStart(2,"0"), us=String(usedSec%60).padStart(2,"0");
+
+  // lưu lịch sử điểm cho tài khoản hiện tại
+  const now=new Date();
+  const dateStr=`${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  saveScore({exam:curKey, score, correct, total, date:dateStr});
+
+  document.getElementById("examView").classList.add("hide");
+  document.getElementById("resultView").classList.remove("hide");
+  window.scrollTo(0,0);
+
+  document.getElementById("resultBox").innerHTML=`
+    <div class="statline" style="font-size:15px;color:var(--pp-dark)">Thí sinh: <b>${currentUser.name}</b></div>
+    <div class="scorebig ${pass?'pass':'fail'}">${score.toFixed(1)}<span style="font-size:24px;color:#999">/10</span></div>
+    <div class="verdict ${pass?'pass':'fail'}">${pass?'✅ ĐẠT (≥ 5.0)':'❌ CHƯA ĐẠT (< 5.0)'}</div>
+    <div class="statline">Đúng <b>${correct}/${total}</b> câu · Sai/bỏ trống ${total-correct} câu</div>
+    <div class="statline">Thời gian làm bài: ${um}:${us}</div>
+    <div class="statline" style="margin-top:8px;font-size:13px">⚠️ Lưu ý: các câu có nhãn vàng bên dưới là đáp án Claude xác minh từ ngân hàng nhưng <b>nên đối chiếu lại bản gốc</b>.</div>
+    <div class="actions">
+      <button class="btn-primary" onclick="loadExam(curKey)">🔄 Thi lại đề này</button>
+      <button class="btn-ghost" onclick="window.print()">🖨️ In / Lưu PDF kết quả</button>
+    </div>`;
+
+  buildReview();
+}
+
+/* ===== XEM LẠI: chỉ hiện câu SAI/bỏ trống, cho CHỌN LẠI đến khi đúng ===== */
+let resolved=new Set(), retryList=[];
+function buildReview(){
+  const keys=["A","B","C","D"];
+  resolved=new Set();
+  retryList=exam.questions.map((q,i)=>i).filter(i=>answers[i]!==exam.questions[i].a);
+  const box=document.getElementById("reviewList");
+  if(retryList.length===0){
+    box.innerHTML=`<div class="retry-head" style="color:var(--ok)">🎉 Tuyệt vời! Bạn làm ĐÚNG HẾT — không có câu nào cần ôn lại.</div>`;
+    return;
+  }
+  let rev=`<div class="retry-head" id="retryHead"></div>
+    <p style="color:var(--muted);font-size:13.5px;margin:0 0 12px">Chỉ hiện các câu bạn làm <b>SAI / bỏ trống</b> (câu đúng đã được bỏ qua). Hãy <b>chọn lại</b> cho đến khi đúng — hoặc bấm "xem đáp án".</p>`;
+  retryList.forEach(i=>{
+    const q=exam.questions[i], ua=answers[i];
+    rev+=`<div class="rev" id="rev-${i}"><div class="rh"><span class="qnum">Câu ${i+1}</span><span class="qmod">${q.m}</span>
+      <span class="badge bad" id="revbadge-${i}">${ua===null?'⬜ Bỏ trống — chọn lại':'✗ Đã sai — chọn lại'}</span></div>
+      <div style="font-weight:600;margin-bottom:8px">${q.q}</div><div>`;
+    q.o.forEach((opt,j)=>{
+      const wrongPick=(j===ua && ua!==q.a);
+      rev+=`<button class="ropt ${wrongPick?'wrong':''}" id="ropt-${i}-${j}" ${wrongPick?'disabled':''} onclick="reviewPick(${i},${j})"><b>${keys[j]}.</b> ${opt}${wrongPick?' ❌ (bạn đã chọn)':''}</button>`;
+    });
+    rev+=`</div><button class="reveal" id="reveal-${i}" onclick="revealAnswer(${i})">💡 Chịu thua — xem đáp án &amp; giải thích</button>
+      <div class="expl ${q.flag?'flag':''} hide" id="rexpl-${i}">💡 ${q.e}</div></div>`;
+  });
+  box.innerHTML=rev;
+  updateRetryHead();
+}
+function updateRetryHead(){
+  const h=document.getElementById("retryHead"); if(!h) return;
+  const left=retryList.length-resolved.size;
+  if(left===0){ h.style.color="var(--ok)"; h.innerHTML=`🎉 Đã ôn lại xong tất cả ${retryList.length} câu sai!`; }
+  else { h.style.color=""; h.innerHTML=`📋 Cần làm lại: còn <b>${left}/${retryList.length}</b> câu`; }
+}
+function reviewPick(i,j){
+  if(resolved.has(i)) return;
+  const q=exam.questions[i], btn=document.getElementById(`ropt-${i}-${j}`);
+  if(j===q.a){
+    btn.className="ropt correct"; btn.innerHTML+=" ✅";
+    q.o.forEach((_,k)=>{ document.getElementById(`ropt-${i}-${k}`).disabled=true; });
+    const bd=document.getElementById(`revbadge-${i}`); bd.className="badge ok"; bd.textContent="✓ Làm lại ĐÚNG";
+    document.getElementById(`rexpl-${i}`).classList.remove("hide");
+    document.getElementById(`reveal-${i}`).classList.add("hide");
+    resolved.add(i); updateRetryHead();
+  } else {
+    btn.className="ropt wrong"; btn.disabled=true;   // chọn sai → gạch bỏ, thử tiếp
+  }
+}
+function revealAnswer(i){
+  if(resolved.has(i)) return;
+  const q=exam.questions[i];
+  const cb=document.getElementById(`ropt-${i}-${q.a}`); cb.className="ropt correct"; cb.innerHTML+=" ✅ (đáp án đúng)";
+  q.o.forEach((_,k)=>{ document.getElementById(`ropt-${i}-${k}`).disabled=true; });
+  const bd=document.getElementById(`revbadge-${i}`); bd.className="badge"; bd.style.background="#9a6b00"; bd.style.color="#fff"; bd.textContent="👁 Đã xem đáp án";
+  document.getElementById(`rexpl-${i}`).classList.remove("hide");
+  document.getElementById(`reveal-${i}`).classList.add("hide");
+  resolved.add(i); updateRetryHead();
+}
+
+/* init: nạp danh sách đề + kiểm tra phiên đăng nhập */
+(function(){
+  const sel=document.getElementById("examSel");
+  Object.keys(EXAMS).forEach(k=>{ const o=document.createElement("option"); o.value=k; o.textContent="Đề "+k; sel.appendChild(o); });
+  let saved=null; try{ saved=sessionStorage.getItem("ttn_user"); }catch(e){}
+  const acc=saved && USERS.find(x=>x.u===saved);
+  if(acc){ currentUser=acc; enterApp(); }            // còn phiên → vào thẳng
+  else { document.getElementById("loginView").classList.remove("hide"); }  // chưa → hiện đăng nhập
+})();
+</script>
+</body>
+</html>
