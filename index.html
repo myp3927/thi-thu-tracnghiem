@@ -17,6 +17,7 @@
     --shadow-lg:0 18px 50px rgba(16,30,54,.18);
   }
   *{box-sizing:border-box}
+  button,select,input,textarea{font-family:inherit}
   html{-webkit-text-size-adjust:100%}
   body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,system-ui,"Helvetica Neue",Arial,sans-serif;color:var(--ink);
     background:radial-gradient(1100px 480px at 78% -8%,#e3ecfa 0%,rgba(227,236,250,0) 60%),
@@ -125,8 +126,9 @@
   .start-stats b{display:block;font-size:28px;color:var(--pp-dark);font-weight:800;letter-spacing:-.5px}
   .start-stats span{font-size:12px;color:var(--muted);font-weight:600}
   .start-mods{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:26px}
-  .startbtn{background:var(--grad-ok);color:#fff;border:none;border-radius:14px;padding:16px 46px;font-size:18px;font-weight:800;cursor:pointer;
-    box-shadow:0 8px 22px rgba(15,157,88,.36);transition:transform .1s,box-shadow .15s;letter-spacing:.3px}
+  .startbtn{background:var(--grad-ok);color:#fff;border:none;border-radius:14px;padding:15px 44px;font-size:17px;font-weight:700;cursor:pointer;
+    box-shadow:0 8px 22px rgba(15,157,88,.36);transition:transform .1s,box-shadow .15s;display:inline-flex;align-items:center;gap:9px}
+  .startbtn .play{display:inline-flex;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.22);align-items:center;justify-content:center;font-size:11px}
   .startbtn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(15,157,88,.45)}
   .start-note{margin-top:20px;font-size:13px;color:#8a6516;background:var(--warnbg);border:1px solid #f3e2bd;border-radius:11px;padding:11px 15px}
   /* ===== Login ===== */
@@ -152,6 +154,8 @@
   .userchip{display:flex;align-items:center;gap:10px;font-size:13.5px;color:#fff;font-weight:600}
   .logoutbtn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.36);border-radius:9px;padding:7px 13px;font-size:13px;cursor:pointer;transition:.12s}
   .logoutbtn:hover{background:rgba(255,255,255,.26)}
+  .backbtn{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.36);border-radius:9px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;transition:.12s}
+  .backbtn:hover{background:rgba(255,255,255,.26)}
   /* history */
   .histbox{margin-top:28px;text-align:left;border-top:1px solid var(--line);padding-top:22px}
   .histbox h3{color:var(--pp-dark);font-size:15px;margin:0 0 10px;font-weight:700}
@@ -194,6 +198,7 @@
     </div>
   </div>
   <div class="spacer"></div>
+  <button class="backbtn hide" id="backBtn" onclick="backToStart()">← Thoát đề</button>
   <div class="userchip"><span>👤 <b id="userName"></b></span><button class="logoutbtn" onclick="doLogout()">Đăng xuất</button></div>
   <select class="examsel" id="examSel" onchange="loadExam(this.value)"></select>
   <div class="timer" id="timer">40:00</div>
@@ -554,6 +559,7 @@ function loadExam(key){
   document.getElementById("examView").classList.add("hide");
   document.getElementById("resultView").classList.add("hide");
   document.getElementById("startView").classList.remove("hide");
+  document.getElementById("backBtn").classList.add("hide");
   renderStart(); window.scrollTo(0,0);
 }
 
@@ -571,7 +577,7 @@ function renderStart(){
       <div><b>5.0</b><span>điểm đạt</span></div>
     </div>
     <div class="start-mods">${modstr}</div>
-    <button class="startbtn" onclick="startExam()">▶ Bắt đầu thi</button>
+    <button class="startbtn" onclick="startExam()"><span class="play">▶</span> Bắt đầu thi</button>
     <div class="start-note">⏱️ Đồng hồ chỉ bắt đầu đếm khi bạn bấm "Bắt đầu thi". Hết giờ sẽ tự động nộp bài.</div>
     ${historyHTML()}`;
 }
@@ -580,7 +586,14 @@ function renderStart(){
 function startExam(){
   document.getElementById("startView").classList.add("hide");
   document.getElementById("examView").classList.remove("hide");
+  document.getElementById("backBtn").classList.remove("hide");
   buildGrid(); renderQ(); startTimer(exam.minutes*60); window.scrollTo(0,0);
+}
+
+/* Thoát đề khi đang thi → quay lại màn hình bắt đầu (không lưu đáp án đang làm) */
+function backToStart(){
+  if(!confirm("Thoát đề và quay lại màn hình bắt đầu? Các đáp án đang làm sẽ KHÔNG được lưu.")) return;
+  loadExam(curKey);
 }
 
 function buildGrid(){
@@ -643,6 +656,7 @@ function submitExam(auto=false){
     if(!confirm(msg)) return;
   }
   submitted=true; if(timerId) clearInterval(timerId);
+  document.getElementById("backBtn").classList.add("hide");
   const total=exam.questions.length;
   let correct=0; answers.forEach((a,i)=>{ if(a===exam.questions[i].a) correct++; });
   const score=Math.round(correct/total*100)/10;     // /10
