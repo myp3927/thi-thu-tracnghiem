@@ -165,6 +165,33 @@
   .histtable th{background:var(--pp-light);color:var(--pp-dark);font-weight:700}
   .histtable tbody tr:nth-child(even){background:#fafbfd}
   .hist-empty{color:var(--muted);font-size:13px;background:#f5f7fb;border-radius:10px;padding:14px;text-align:center}
+  /* ===== Tabs chuyển chế độ ===== */
+  .tabs{display:flex;gap:5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:4px}
+  .tab{background:transparent;color:#fff;border:none;border-radius:9px;padding:7px 15px;font-size:13.5px;font-weight:700;cursor:pointer;opacity:.85;transition:.12s}
+  .tab:hover{opacity:1} .tab.active{background:#fff;color:var(--pp-dark);opacity:1;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+  .ctrls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  /* ===== Ôn tập ===== */
+  .study-wrap{max-width:840px;margin:24px auto;padding:0 18px}
+  .study-mods{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px}
+  .modtab{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer;color:#54607a;box-shadow:var(--shadow-sm);transition:transform .08s,border-color .12s,box-shadow .12s}
+  .modtab:hover{border-color:var(--pp);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .modtab.active{color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(43,87,154,.3)}
+  .modtab.active.m-excel{background:linear-gradient(135deg,#16a35a,#0f7a45)} .modtab.active.m-project{background:linear-gradient(135deg,#d98324,#b45309)}
+  .modtab.active.m-ppt{background:linear-gradient(135deg,#e0612f,#c2410c)} .modtab.active.m-word{background:linear-gradient(135deg,#2f63ad,#1d4ed8)}
+  .modtab small{font-weight:600;opacity:.75;margin-left:4px}
+  .study-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px 30px;box-shadow:var(--shadow-md)}
+  .opts-study{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .sopt{border:1.5px solid #e2e7ef;border-radius:12px;padding:13px 16px;font-size:15px;background:#fbfcfe;line-height:1.5}
+  .sopt.correct{border-color:var(--ok);background:var(--okbg);color:#0f6a3c;font-weight:600;box-shadow:0 0 0 3px rgba(15,157,88,.12)}
+  .sopt b{color:var(--pp);margin-right:6px}
+  .study-actions{margin:18px 0 6px;text-align:center}
+  .reveal-big{background:var(--grad-ok);color:#fff;border:none;border-radius:12px;padding:12px 30px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 5px 14px rgba(15,157,88,.3);transition:transform .08s,box-shadow .12s}
+  .reveal-big:hover{transform:translateY(-1px)}
+  .reveal-big.hidden{background:#eef2f7;color:#33405a;box-shadow:none;border:1px solid var(--line)}
+  .study-progress{height:6px;border-radius:999px;background:#e7ecf3;overflow:hidden;margin:2px 0 16px}
+  .study-progress>i{display:block;height:100%;background:var(--grad);border-radius:999px;transition:width .25s}
+  .study-empty{text-align:center;color:var(--muted);padding:34px 16px;background:#f5f7fb;border-radius:14px;line-height:1.7}
+  .expl{font-size:13.7px;color:#3a4660;background:#f4f7fb;border-radius:10px;padding:11px 13px}
   .hide{display:none}
   /* Khử "sticky hover" trên thiết bị cảm ứng (tránh 1 ô bị viền xanh dù chưa chọn) */
   @media (hover:none){
@@ -203,11 +230,17 @@
       <div class="sub" id="examMeta">Đề: A211PC10 · DethiNC07062025C1607 · đợt 07/06/2025</div>
     </div>
   </div>
+  <div class="tabs">
+    <button class="tab active" id="tabExam" onclick="switchMode('exam')">📝 Thi thử</button>
+    <button class="tab" id="tabStudy" onclick="switchMode('study')">📚 Ôn tập</button>
+  </div>
   <div class="spacer"></div>
-  <button class="backbtn hide" id="backBtn" onclick="backToStart()">← Thoát đề</button>
+  <div class="ctrls" id="examControls">
+    <button class="backbtn hide" id="backBtn" onclick="backToStart()">← Thoát đề</button>
+    <select class="examsel" id="examSel" onchange="loadExam(this.value)"></select>
+    <div class="timer" id="timer">40:00</div>
+  </div>
   <div class="userchip"><span>👤 <b id="userName"></b></span><button class="logoutbtn" onclick="doLogout()">Đăng xuất</button></div>
-  <select class="examsel" id="examSel" onchange="loadExam(this.value)"></select>
-  <div class="timer" id="timer">40:00</div>
 </div>
 
 <div id="startView" class="start-wrap hide">
@@ -238,6 +271,9 @@
     <div id="reviewList"></div>
   </main>
 </div>
+
+<!-- ===== KHÔNG GIAN ÔN TẬP ===== -->
+<div id="studyView" class="study-wrap hide"></div>
 
 <script>
 /* =========================================================================
@@ -499,6 +535,73 @@ const EXAMS = {
   }
 };
 
+/* ===================== NGÂN HÀNG ÔN TẬP (theo MODULE, thứ tự thi) =====================
+   Nguồn: TaiLieuOnThiLTNC-NTH.pdf (408 câu, đáp án tô vàng). Nạp dần từng module.   */
+const BANK = {
+  "Excel":      { label:"📊 Excel 2010",      questions:[] },
+  "MS Project": { label:"📅 MS Project 2010", questions:[] },
+  "PowerPoint": { label:"📽️ PowerPoint 2010", questions:[
+    {q:"Trong PowerPoint 2010, chế độ Black and unblack slide show khi trình chiếu dùng để:",
+      o:["Bôi đen một Slide","Biến màn hình trình chiếu chuyển sang toàn bộ màu đen và ngược lại","Biến màn hình sang màu đen rồi không trở lại được","Bôi đen và xóa bôi đen một slide"],
+      a:1, e:"Khi đang trình chiếu, phím B làm màn hình thành đen; bấm lại để trở về (toggle)."},
+    {q:"Để lập trình Visual Basic for Application (VBA) trong PowerPoint 2010, trước hết phải hiển thị thanh công cụ nào?",
+      o:["Macros","Visual Basic","Macro Security","Developer"], a:3,
+      e:"Bật thẻ Developer (File→Options→Customize Ribbon→Developer) để lập trình VBA."},
+    {q:"Trong PowerPoint 2010, để đảo hoa/thường các ký tự được chọn (chữ đầu thành thường, còn lại thành hoa), ta làm:",
+      o:["Font/Change Case/Sentence case","Font/Change Case/UPPERCASE","Font/Change Case/Capitalize Each Word","Font/Change Case/tOGGLE cASE"], a:3,
+      e:"Toggle case đảo hoa↔thường của các ký tự đang chọn."},
+    {q:"Trong PowerPoint 2010, chức năng 'See all slides' khi trình chiếu dùng để:",
+      o:["Phóng to một slide","Xem tất cả các slide trên một màn hình","Xem tất cả slide trên nhiều cửa sổ khác nhau","Thu nhỏ tất cả slide để dễ nhìn"], a:1,
+      e:"See all slides hiển thị toàn bộ slide dạng lưới trên một màn hình để chọn nhanh."},
+    {q:"Trong PowerPoint 2010, muốn tạo một sơ đồ tổ chức, ta dùng:",
+      o:["Insert/Chart","Insert/Shapes","Add a Chart trong Home/Drawing","Insert/SmartArt"], a:3,
+      e:"SmartArt có sẵn mẫu sơ đồ tổ chức (Organization Chart)."},
+    {q:"Trong PowerPoint 2010, để làm một đối tượng XUẤT HIỆN trên màn hình, ta dùng hiệu ứng thuộc nhóm nào?",
+      o:["Entrance","Emphasis","Exit","Motion Paths"], a:0,
+      e:"Entrance = hiệu ứng xuất hiện; Emphasis nhấn mạnh; Exit biến mất; Motion Paths di chuyển."},
+    {q:"Trong PowerPoint 2010, muốn đánh số cho từng Slide, ta dùng lệnh nào?",
+      o:["Format/Bullets and Numbering","Insert/Slide Number","Insert/Bullets and Numbering","Các câu trên đều sai"], a:1,
+      e:"Insert → Slide Number để đánh số slide."},
+    {q:"Trong PowerPoint 2010, muốn thêm Header và Footer vào các Slide, ta thực hiện:",
+      o:["Insert/Header and Footer","Các câu trên đều sai","View/Header and Footer","View/Notes Page"], a:0,
+      e:"Header & Footer nằm ở thẻ Insert."},
+    {q:"Trong PowerPoint 2010, để chia đoạn văn thành nhiều cột ta làm:",
+      o:["Home/Line Spacing","Home/Add or Remove Columns","Home/Increase List Level","Home/Decrease List Level"], a:1,
+      e:"Add or Remove Columns để chia văn bản thành nhiều cột."},
+    {q:"Trong PowerPoint 2010, để gạch ngang các ký tự được chọn ta làm:",
+      o:["Home/Font/Strikethrough","Home/Font/Text Shadow","Home/Font/Character Spacing","Home/Font/Underline"], a:0,
+      e:"Strikethrough = gạch ngang chữ."},
+    {q:"Trong PowerPoint 2010, để nhanh chóng định dạng khung văn bản theo kiểu dáng có sẵn ta làm:",
+      o:["Home/Drawing/Quick Styles","Home/Drawing/Shape Fill","Home/Drawing/Shape Effects","Home/Drawing/Shape Outline"], a:0,
+      e:"Quick Styles áp bộ định dạng khung có sẵn."},
+    {q:"Muốn in 6 slide trên một khổ giấy A4 NẰM NGANG, cách nào sau đây KHÔNG đúng?",
+      o:["Ctrl+P/Settings/6 Slides Horizontal và Landscape","Ctrl+P/Settings/6 Slides Vertical và Landscape","File/Print/Settings/6 Slides Horizontal và Portrait","File/Print/Settings/6 Slides Horizontal và Landscape"], a:2,
+      e:"Nằm ngang = Landscape; chọn Portrait (dọc) là sai."},
+    {q:"Khi cần dùng ký hiệu toán học (căn, phân số, tích phân, dấu góc, phép so sánh, ký hiệu đặc biệt...), ta thực hiện:",
+      o:["Format/Object/Microsoft Equation 3.0","Insert/Object/Microsoft Equation 3.0","Cả A và B đều đúng","Cả A và B đều sai"], a:1,
+      e:"Chèn công thức qua Insert → Object → Microsoft Equation 3.0."},
+    {q:"Trong PowerPoint 2010, muốn sắp xếp các slide dễ dàng hơn, ta dùng lệnh:",
+      o:["File/New","View/Slide Sorter","Các câu trên đều sai","Insert/New Slide"], a:1,
+      e:"Slide Sorter cho xem toàn bộ & kéo-thả sắp xếp slide."},
+    {q:"Lợi ích của việc sử dụng Template trong PowerPoint 2010 là:",
+      o:["Hạn chế lỗi phát sinh khi trình chiếu","Giúp giảm thời gian trình chiếu","Thiết định sẵn thời gian cho mỗi slide","Giảm bớt thời gian thiết kế slide"], a:3,
+      e:"Template = mẫu thiết kế sẵn → tiết kiệm thời gian thiết kế."},
+    {q:"Muốn sửa/thay nhanh các nội dung giống nhau cho thống nhất giữa các slide mà không bỏ sót, ta dùng:",
+      o:["Find and Replace → Replace","Find and Replace → Replace All","Ctrl+F → Replace → Replace All","Duplicate Slide"], a:1,
+      e:"Replace All thay tất cả các chỗ giống nhau cùng lúc."},
+    {q:"Để đưa họ tên của mình vào cuối slide làm tiêu đề chân trang (Footer), người thiết kế phải:",
+      o:["Insert → Header and Footer","View → Header and Footer","Cả A và B đều sai","Cả A và B đều đúng"], a:0,
+      e:"Header & Footer ở thẻ Insert; nhập tên vào ô Footer."},
+    {q:"Sau khi chọn một khung văn bản, để thay đổi màu đường viền (xung quanh) vĩnh viễn, cách nào sau đây KHÔNG đúng?",
+      o:["Format/Shape Styles/chọn Theme Style phù hợp","Home/Drawing/Shape Fill/chọn màu cần thay đổi","Format/Shape Styles/Shape Outline/chọn màu cần tô","Home/Drawing/Shape Outline/chọn màu cần thay đổi"], a:2,
+      e:"Theo file tổng ôn, đáp án là C. (Đổi màu viền dùng Shape Outline ở Home/Drawing; lưu ý Shape Fill chỉ đổi màu nền bên trong.)"},
+    {q:"Khi đang trình chiếu, muốn chuyển về slide ĐẦU TIÊN của file, ta làm:",
+      o:["Ấn phím Ctrl+Home","Ấn nút Action Button: Forward or Next","Ấn phím End trên bàn phím","Ấn phím Home trên bàn phím"], a:3,
+      e:"Trong khi trình chiếu, phím Home đưa về slide đầu (End về slide cuối)."}
+  ] },
+  "Word":       { label:"📝 Word 2010",       questions:[] }
+};
+
 /* ===================== TÀI KHOẢN ĐĂNG NHẬP ===================== */
 /* 👉 Sửa/thêm tài khoản ở đây. name = tên hiển thị (thí sinh). */
 const USERS = [
@@ -600,6 +703,65 @@ function startExam(){
 function backToStart(){
   if(!confirm("Thoát đề và quay lại màn hình bắt đầu? Các đáp án đang làm sẽ KHÔNG được lưu.")) return;
   loadExam(curKey);
+}
+
+/* ===================== KHÔNG GIAN ÔN TẬP ===================== */
+let studyKey=null, studyIdx=0, studyReveal=false;
+
+function switchMode(m){
+  document.getElementById("tabExam").classList.toggle("active", m==="exam");
+  document.getElementById("tabStudy").classList.toggle("active", m==="study");
+  if(m==="study"){
+    if(timerId) clearInterval(timerId);
+    document.getElementById("examControls").classList.add("hide");
+    ["startView","examView","resultView"].forEach(id=>document.getElementById(id).classList.add("hide"));
+    document.getElementById("backBtn").classList.add("hide");
+    document.getElementById("examMeta").textContent="Chế độ Ôn tập — học theo từng module";
+    document.getElementById("studyView").classList.remove("hide");
+    const def = studyKey || Object.keys(BANK).find(k=>BANK[k].questions.length) || Object.keys(BANK)[0];
+    loadStudy(def);
+  }else{
+    document.getElementById("studyView").classList.add("hide");
+    document.getElementById("examControls").classList.remove("hide");
+    loadExam(curKey);   // về màn hình bắt đầu của Thi thử
+  }
+  window.scrollTo(0,0);
+}
+
+function loadStudy(key){ studyKey=key; studyIdx=0; studyReveal=false; renderStudyView(); window.scrollTo(0,0); }
+function studyGo(d){ const n=BANK[studyKey].questions.length; studyIdx=Math.min(n-1,Math.max(0,studyIdx+d)); studyReveal=false; renderStudyView(); }
+function toggleReveal(){ studyReveal=!studyReveal; renderStudyView(); }
+
+function renderStudyView(){
+  const keys=["A","B","C","D"];
+  let mods=`<div class="study-mods">`;
+  Object.keys(BANK).forEach(k=>{
+    const n=BANK[k].questions.length;
+    mods+=`<button class="modtab ${modClass(k)} ${k===studyKey?'active':''}" onclick="loadStudy('${k}')">${BANK[k].label}<small>${n?n+' câu':'sắp có'}</small></button>`;
+  });
+  mods+=`</div>`;
+  const mod=BANK[studyKey], qs=mod.questions;
+  let body;
+  if(!qs.length){
+    body=`<div class="study-empty">📚 Module <b>${mod.label}</b> đang được cập nhật dần từ file tổng ôn.<br>Hiện đã có: <b>PowerPoint</b>. Các module khác sẽ bổ sung tiếp.</div>`;
+  }else{
+    const q=qs[studyIdx]; let opts="";
+    q.o.forEach((o,j)=>{ const ok=studyReveal&&j===q.a; opts+=`<div class="sopt ${ok?'correct':''}"><b>${keys[j]}.</b> ${o}${ok?' ✅':''}</div>`; });
+    const pct=Math.round((studyIdx+1)/qs.length*100);
+    body=`<div class="study-card">
+      <div class="qhead"><span class="qnum">Câu ${studyIdx+1}/${qs.length}</span><span class="qmod ${modClass(studyKey)}">${mod.label}</span></div>
+      <div class="study-progress"><i style="width:${pct}%"></i></div>
+      <div class="qtext">${q.q}</div>
+      <div class="opts-study">${opts}</div>
+      ${studyReveal?`<div class="expl" style="margin-top:14px">💡 ${q.e||''}</div>`:''}
+      <div class="study-actions"><button class="reveal-big ${studyReveal?'hidden':''}" onclick="toggleReveal()">${studyReveal?'🙈 Ẩn đáp án':'👁 Hiện đáp án'}</button></div>
+      <div class="navrow">
+        <button onclick="studyGo(-1)" ${studyIdx===0?'disabled':''}>← Câu trước</button>
+        <button onclick="studyGo(1)" ${studyIdx===qs.length-1?'disabled':''}>Câu sau →</button>
+      </div>
+    </div>`;
+  }
+  document.getElementById("studyView").innerHTML=mods+body;
 }
 
 function buildGrid(){
