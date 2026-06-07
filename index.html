@@ -193,6 +193,18 @@
   .study-empty{text-align:center;color:var(--muted);padding:34px 16px;background:#f5f7fb;border-radius:14px;line-height:1.7}
   .expl{font-size:13.7px;color:#3a4660;background:#f4f7fb;border-radius:10px;padding:11px 13px}
   .hide{display:none}
+  /* ===== Nút Nghe (TTS) ===== */
+  .tts-btn{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:11px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 14px rgba(99,102,241,.35);transition:transform .1s,box-shadow .15s,background .2s;font-family:inherit;letter-spacing:.2px}
+  .tts-btn:hover{transform:translateY(-1px);box-shadow:0 7px 20px rgba(99,102,241,.45)}
+  .tts-btn:active{transform:scale(.97)}
+  .tts-btn.speaking{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 14px rgba(239,68,68,.35);animation:tts-pulse 1.5s ease-in-out infinite}
+  .tts-btn.speaking:hover{box-shadow:0 7px 20px rgba(239,68,68,.45)}
+  .tts-btn .tts-icon{font-size:17px;display:flex}
+  .tts-btn-sm{font-size:13px;padding:8px 14px;border-radius:9px}
+  @keyframes tts-pulse{0%,100%{opacity:1}50%{opacity:.78}}
+  .tts-row{margin:14px 0 4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .tts-hint{font-size:12px;color:var(--muted);font-style:italic}
   /* Khử "sticky hover" trên thiết bị cảm ứng (tránh 1 ô bị viền xanh dù chưa chọn) */
   @media (hover:none){
     .opt:not(.sel):hover{border-color:#dde3ec;background:#fff;transform:none;box-shadow:none}
@@ -3361,6 +3373,7 @@ function renderStudyView(){
       <div class="qhead"><span class="qnum">Câu ${studyIdx+1}/${qs.length}</span><span class="qmod ${modClass(studyKey)}">${mod.label}</span></div>
       <div class="study-progress"><i style="width:${pct}%"></i></div>
       <div class="qtext">${q.q}</div>
+      <div class="tts-row"><button class="tts-btn" id="ttsStudyBtn" onclick="ttsReadStudyQuestion()"><span class="tts-icon">🔊</span> Nghe đề + đáp án</button><span class="tts-hint">Đọc câu hỏi và đáp án đúng</span></div>
       <div class="opts-study">${opts}</div>
       ${studyReveal?`<div class="expl" style="margin-top:14px">💡 ${q.e||''}</div>`:''}
       <div class="study-actions"><button class="reveal-big ${studyReveal?'hidden':''}" onclick="toggleReveal()">${studyReveal?'🙈 Ẩn đáp án':'👁 Hiện đáp án'}</button></div>
@@ -3398,7 +3411,9 @@ function renderQ(){
   const q=exam.questions[cur];
   const keys=["A","B","C","D"];
   let html=`<div class="qhead"><span class="qnum">Câu ${cur+1}/${exam.questions.length}</span><span class="qmod ${modClass(q.m)}">${q.m}</span></div>
-    <div class="qtext">${q.q}</div><div class="opts">`;
+    <div class="qtext">${q.q}</div>
+    <div class="tts-row"><button class="tts-btn" id="ttsExamBtn" onclick="ttsReadQuestion(${cur},'exam')"><span class="tts-icon">🔊</span> Nghe đề + đáp án</button><span class="tts-hint">Đọc câu hỏi và đáp án đúng</span></div>
+    <div class="opts">`;
   q.o.forEach((opt,i)=>{
     const sel = answers[cur]===i ? "sel":"";
     html+=`<label class="opt ${sel}"><input type="radio" name="opt" ${answers[cur]===i?"checked":""} onclick="choose(${i})">
@@ -3410,6 +3425,7 @@ function renderQ(){
     </div>`;
   document.getElementById("qcard").innerHTML=html;
   refreshGrid();
+  ttsUpdateBtnState('ttsExamBtn');
 }
 function choose(i){ answers[cur]=i; renderQ(); }
 function go(d){ cur=Math.min(exam.questions.length-1,Math.max(0,cur+d)); renderQ(); }
@@ -3482,7 +3498,9 @@ function buildReview(){
     const q=exam.questions[i], ua=answers[i];
     rev+=`<div class="rev" id="rev-${i}"><div class="rh"><span class="qnum">Câu ${i+1}</span><span class="qmod ${modClass(q.m)}">${q.m}</span>
       <span class="badge bad" id="revbadge-${i}">${ua===null?'⬜ Bỏ trống — chọn lại':'✗ Đã sai — chọn lại'}</span></div>
-      <div style="font-weight:600;margin-bottom:8px">${q.q}</div><div>`;
+      <div style="font-weight:600;margin-bottom:8px">${q.q}</div>
+      <div class="tts-row"><button class="tts-btn tts-btn-sm" id="ttsRev-${i}" onclick="ttsReadReviewQuestion(${i})"><span class="tts-icon">🔊</span> Nghe</button></div>
+      <div>`;
     q.o.forEach((opt,j)=>{
       const wrongPick=(j===ua && ua!==q.a);
       rev+=`<button class="ropt ${wrongPick?'wrong':''}" id="ropt-${i}-${j}" ${wrongPick?'disabled':''} onclick="reviewPick(${i},${j})"><b>${keys[j]}.</b> ${opt}${wrongPick?' ❌ (bạn đã chọn)':''}</button>`;
@@ -3533,6 +3551,145 @@ function revealAnswer(i){
   if(acc){ currentUser=acc; enterApp(); }            // còn phiên → vào thẳng
   else { document.getElementById("loginView").classList.remove("hide"); }  // chưa → hiện đăng nhập
 })();
+
+/* ===================== TEXT-TO-SPEECH (TTS) ENGINE ===================== */
+let ttsCurrentBtnId = null;
+
+/* Lấy giọng tiếng Việt (nếu có) */
+function ttsGetViVoice(){
+  const voices = speechSynthesis.getVoices();
+  return voices.find(v => v.lang && v.lang.startsWith('vi'))
+      || voices.find(v => v.lang && v.lang.startsWith('vi-VN'))
+      || null;
+}
+
+/* Dừng đọc */
+function ttsStop(){
+  speechSynthesis.cancel();
+  if(ttsCurrentBtnId){
+    const btn = document.getElementById(ttsCurrentBtnId);
+    if(btn){ btn.classList.remove('speaking'); btn.innerHTML='<span class="tts-icon">🔊</span> '+(btn.classList.contains('tts-btn-sm')?'Nghe':'Nghe đề + đáp án'); }
+  }
+  ttsCurrentBtnId = null;
+}
+
+/* Cập nhật trạng thái nút (khi re-render) */
+function ttsUpdateBtnState(btnId){
+  if(ttsCurrentBtnId && speechSynthesis.speaking){
+    const btn = document.getElementById(btnId);
+    if(btn && ttsCurrentBtnId === btnId){
+      btn.classList.add('speaking');
+      btn.innerHTML='<span class="tts-icon">⏹️</span> Dừng đọc';
+    }
+  }
+}
+
+/* Đọc một chuỗi text */
+function ttsSpeak(text, btnId, onEnd){
+  // Nếu đang đọc cùng nút → dừng
+  if(speechSynthesis.speaking && ttsCurrentBtnId === btnId){
+    ttsStop(); return;
+  }
+  // Dừng bất kỳ đọc nào trước đó
+  ttsStop();
+  
+  if(!('speechSynthesis' in window)){
+    alert('Trình duyệt của bạn không hỗ trợ đọc văn bản (Text-to-Speech). Hãy dùng Chrome hoặc Edge.');
+    return;
+  }
+  
+  const btn = document.getElementById(btnId);
+  if(btn){ btn.classList.add('speaking'); btn.innerHTML='<span class="tts-icon">⏹️</span> Dừng đọc'; }
+  ttsCurrentBtnId = btnId;
+  
+  // Chia text thành các đoạn nhỏ (tránh giới hạn 200 ký tự của một số trình duyệt)
+  const chunks = ttsChunkText(text, 180);
+  let idx = 0;
+  
+  function speakNext(){
+    if(idx >= chunks.length || ttsCurrentBtnId !== btnId){
+      ttsStop();
+      if(onEnd) onEnd();
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(chunks[idx]);
+    utter.lang = 'vi-VN';
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
+    const viVoice = ttsGetViVoice();
+    if(viVoice) utter.voice = viVoice;
+    utter.onend = function(){ idx++; speakNext(); };
+    utter.onerror = function(){ ttsStop(); };
+    speechSynthesis.speak(utter);
+  }
+  speakNext();
+}
+
+/* Chia text thành từng đoạn nhỏ theo câu/dấu chấm */
+function ttsChunkText(text, maxLen){
+  const sentences = text.split(/(?<=[.!?;:])\s+|(?<=\n)/);
+  const chunks = [];
+  let current = '';
+  sentences.forEach(s => {
+    if((current + ' ' + s).trim().length > maxLen && current){
+      chunks.push(current.trim());
+      current = s;
+    } else {
+      current = current ? current + ' ' + s : s;
+    }
+  });
+  if(current.trim()) chunks.push(current.trim());
+  return chunks.length ? chunks : [text];
+}
+
+/* Xây dựng text đọc cho 1 câu hỏi */
+function ttsBuildQText(q){
+  const keys = ['A','B','C','D'];
+  let text = 'Câu hỏi: ' + q.q.replace(/<[^>]*>/g,'') + '. ';
+  text += 'Đáp án đúng là ' + keys[q.a] + ': ' + q.o[q.a].replace(/<[^>]*>/g,'').replace(/\\/g, ', ') + '.';
+  if(q.e){
+    text += ' Giải thích: ' + q.e.replace(/<[^>]*>/g,'').replace(/⚠️/g,'Lưu ý:');
+  }
+  return text;
+}
+
+/* === Đọc câu hỏi trong chế độ Thi thử === */
+function ttsReadQuestion(idx, mode){
+  const q = exam.questions[idx];
+  const text = ttsBuildQText(q);
+  ttsSpeak(text, 'ttsExamBtn');
+}
+
+/* === Đọc câu hỏi trong chế độ Ôn tập === */
+function ttsReadStudyQuestion(){
+  const mod = BANK[studyKey];
+  const q = mod.questions[studyIdx];
+  const text = ttsBuildQText(q);
+  ttsSpeak(text, 'ttsStudyBtn');
+}
+
+/* === Đọc câu hỏi trong phần Xem lại (review) === */
+function ttsReadReviewQuestion(idx){
+  const q = exam.questions[idx];
+  const text = ttsBuildQText(q);
+  ttsSpeak(text, 'ttsRev-'+idx);
+}
+
+/* Dừng TTS khi chuyển câu / chuyển chế độ */
+const _origGo = go;
+go = function(d){ ttsStop(); _origGo(d); };
+const _origStudyGo = studyGo;
+studyGo = function(d){ ttsStop(); _origStudyGo(d); };
+const _origSwitchMode = switchMode;
+switchMode = function(m){ ttsStop(); _origSwitchMode(m); };
+const _origLoadExam = loadExam;
+loadExam = function(k){ ttsStop(); _origLoadExam(k); };
+
+/* Preload voices (Chrome cần thời gian load) */
+if('speechSynthesis' in window){
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = function(){ speechSynthesis.getVoices(); };
+}
 </script>
 </body>
 </html>
